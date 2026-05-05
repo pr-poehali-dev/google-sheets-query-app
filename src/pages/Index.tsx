@@ -1,18 +1,10 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
-type SectionKey = "contractors" | "contacts" | "payments" | "comments";
-
-interface SearchResult {
-  contractor: string;
-  inn: string;
-  contact: string;
-  comment: string;
-  paymentDate: string;
-}
+const SEARCH_INN_URL = "https://functions.poehali.dev/53084ea8-1999-43e8-bb8e-c710a430c4d9";
 
 interface Section {
-  key: SectionKey;
+  key: string;
   label: string;
   icon: string;
   description: string;
@@ -24,91 +16,46 @@ const SECTIONS: Section[] = [
     key: "contractors",
     label: "Статус документов",
     icon: "FileText",
-    description: "Поиск документов по ИНН контрагента",
+    description: "Поиск по ИНН — статус документов",
     colorClass: "border-l-blue-700",
   },
   {
     key: "contacts",
     label: "Контакты",
     icon: "Users",
-    description: "Контактные данные контрагента по ИНН",
+    description: "Поиск по ИНН — контактные данные",
     colorClass: "border-l-indigo-600",
   },
   {
     key: "payments",
     label: "Дата платежей",
     icon: "CalendarDays",
-    description: "График платежей контрагента по ИНН",
+    description: "Поиск по ИНН — график платежей",
     colorClass: "border-l-teal-600",
   },
   {
     key: "comments",
     label: "Комментарии",
     icon: "MessageSquare",
-    description: "Комментарии и заметки по контрагенту",
+    description: "Поиск по ИНН — заметки и комментарии",
     colorClass: "border-l-amber-500",
   },
 ];
 
-const MOCK_DATA: Record<string, SearchResult> = {
-  "7707083893": {
-    contractor: "ПАО Сбербанк",
-    inn: "7707083893",
-    contact: "Иванов Иван Иванович, +7 (495) 500-55-50",
-    comment: "Основной банк-партнёр. Договор действует до 31.12.2026.",
-    paymentDate: "15-е число каждого месяца",
-  },
-  "5010011241": {
-    contractor: "ООО «ТехноПром»",
-    inn: "5010011241",
-    contact: "Петрова Мария Сергеевна, +7 (916) 123-45-67",
-    comment: "Поставщик оборудования. Требуется перезаключение договора.",
-    paymentDate: "1-е и 16-е числа месяца",
-  },
-  "7743013902": {
-    contractor: "АО «Газпром Нефть»",
-    inn: "7743013902",
-    contact: "Сидоров Алексей Павлович, +7 (812) 240-44-44",
-    comment: "Долгосрочный контракт на поставку ГСМ. Приоритетный контрагент.",
-    paymentDate: "По выставленным счетам в течение 5 рабочих дней",
-  },
-};
-
-const COLUMNS_MAP: Record<SectionKey, { label: string; field: keyof SearchResult }[]> = {
-  contractors: [
-    { label: "Контрагент", field: "contractor" },
-    { label: "ИНН", field: "inn" },
-    { label: "Комментарий", field: "comment" },
-  ],
-  contacts: [
-    { label: "Контрагент", field: "contractor" },
-    { label: "ИНН", field: "inn" },
-    { label: "Контакт", field: "contact" },
-  ],
-  payments: [
-    { label: "Контрагент", field: "contractor" },
-    { label: "ИНН", field: "inn" },
-    { label: "Дата платежей", field: "paymentDate" },
-  ],
-  comments: [
-    { label: "Контрагент", field: "contractor" },
-    { label: "ИНН", field: "inn" },
-    { label: "Комментарий", field: "comment" },
-  ],
-};
-
 export default function Index() {
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState<SearchResult | null>(null);
+  const [result, setResult] = useState<Record<string, string> | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const openSection = (section: Section) => {
     setActiveSection(section);
     setQuery("");
     setResult(null);
     setNotFound(false);
+    setError(null);
   };
 
   const closeModal = () => {
@@ -116,30 +63,43 @@ export default function Index() {
     setQuery("");
     setResult(null);
     setNotFound(false);
+    setError(null);
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
     setResult(null);
     setNotFound(false);
+    setError(null);
 
-    setTimeout(() => {
-      const found = MOCK_DATA[query.trim()];
-      if (found) {
-        setResult(found);
+    try {
+      const resp = await fetch(SEARCH_INN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inn: query.trim() }),
+      });
+
+      const raw = await resp.json();
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+
+      if (data.found) {
+        setResult(data.data);
+      } else if (data.error) {
+        setError(data.error);
       } else {
         setNotFound(true);
       }
+    } catch {
+      setError("Не удалось получить данные. Проверьте подключение к интернету.");
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSearch();
   };
-
-  const columns = activeSection ? COLUMNS_MAP[activeSection.key] : [];
 
   return (
     <div className="min-h-screen bg-[hsl(216,28%,97%)] flex flex-col font-sans">
@@ -207,8 +167,7 @@ export default function Index() {
         <div className="border border-[hsl(214,20%,86%)] border-l-4 border-l-[hsl(210,80%,50%)] bg-white rounded-sm px-5 py-4 flex gap-3 items-start">
           <Icon name="Info" size={16} className="text-[hsl(210,80%,50%)] mt-0.5 shrink-0" />
           <p className="text-sm text-[hsl(215,16%,48%)] leading-relaxed">
-            Данные загружаются из Google Таблиц в реальном времени. После подключения вашей таблицы
-            введите ИНН в любом разделе — система найдёт строку и вернёт нужные столбцы.
+            Данные загружаются из Google Таблиц в реальном времени. Введите ИНН в любом разделе — система найдёт строку и вернёт все данные по контрагенту.
           </p>
         </div>
       </main>
@@ -227,8 +186,10 @@ export default function Index() {
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={(e) => e.target === e.currentTarget && closeModal()}
         >
-          <div className="bg-white w-full max-w-xl rounded-sm shadow-2xl overflow-hidden"
-               style={{ animation: "scaleIn 0.2s ease-out both" }}>
+          <div
+            className="bg-white w-full max-w-xl rounded-sm shadow-2xl overflow-hidden"
+            style={{ animation: "scaleIn 0.2s ease-out both" }}
+          >
             {/* Modal header */}
             <div className="bg-[hsl(220,65%,22%)] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -277,7 +238,7 @@ export default function Index() {
                 </button>
               </div>
 
-              {/* Results table */}
+              {/* Results */}
               {result && (
                 <div className="mt-5" style={{ animation: "fadeIn 0.25s ease-out both" }}>
                   <div className="flex items-center gap-2 mb-3">
@@ -290,29 +251,28 @@ export default function Index() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-[hsl(220,65%,22%)]">
-                          {columns.map((col) => (
-                            <th
-                              key={col.field}
-                              className="text-left px-4 py-2.5 text-white/80 text-xs font-semibold uppercase tracking-wider"
-                            >
-                              {col.label}
-                            </th>
-                          ))}
+                          <th className="text-left px-4 py-2.5 text-white/80 text-xs font-semibold uppercase tracking-wider w-1/3">
+                            Поле
+                          </th>
+                          <th className="text-left px-4 py-2.5 text-white/80 text-xs font-semibold uppercase tracking-wider">
+                            Значение
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="data-row">
-                          {columns.map((col, idx) => (
-                            <td
-                              key={col.field}
-                              className={`px-4 py-3 border-b border-[hsl(214,20%,86%)] text-[hsl(220,40%,10%)] transition-colors align-top ${
-                                idx === 1 ? "font-mono text-xs" : ""
-                              }`}
-                            >
-                              {result[col.field]}
+                        {Object.entries(result).map(([key, value], idx) => (
+                          <tr
+                            key={key}
+                            className={`data-row ${idx % 2 === 1 ? "bg-[hsl(216,28%,98%)]" : "bg-white"}`}
+                          >
+                            <td className="px-4 py-2.5 border-b border-[hsl(214,20%,86%)] text-[hsl(215,16%,48%)] font-medium text-xs">
+                              {key}
                             </td>
-                          ))}
-                        </tr>
+                            <td className="px-4 py-2.5 border-b border-[hsl(214,20%,86%)] text-[hsl(220,40%,10%)]">
+                              {value || <span className="text-[hsl(215,16%,70%)] italic">—</span>}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -320,14 +280,26 @@ export default function Index() {
               )}
 
               {notFound && (
-                <div className="mt-5 flex items-center gap-2 bg-red-50 border border-red-200 rounded-sm px-4 py-3"
-                     style={{ animation: "fadeIn 0.25s ease-out both" }}>
+                <div
+                  className="mt-5 flex items-center gap-2 bg-red-50 border border-red-200 rounded-sm px-4 py-3"
+                  style={{ animation: "fadeIn 0.25s ease-out both" }}
+                >
                   <Icon name="AlertCircle" size={15} className="text-red-500 shrink-0" />
                   <span className="text-sm text-red-700">
                     Контрагент с ИНН{" "}
                     <span className="font-mono font-semibold">{query}</span>{" "}
                     не найден в таблице.
                   </span>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="mt-5 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-sm px-4 py-3"
+                  style={{ animation: "fadeIn 0.25s ease-out both" }}
+                >
+                  <Icon name="TriangleAlert" size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-sm text-amber-800">{error}</span>
                 </div>
               )}
             </div>
