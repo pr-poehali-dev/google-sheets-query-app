@@ -2,6 +2,7 @@ import { useState } from "react";
 import Icon from "@/components/ui/icon";
 
 const SEARCH_INN_URL = "https://functions.poehali.dev/53084ea8-1999-43e8-bb8e-c710a430c4d9";
+const SEND_TELEGRAM_URL = "https://functions.poehali.dev/9346d690-afa8-42ae-8ea4-cd831e1b62d7";
 
 interface Section {
   key: string;
@@ -67,6 +68,8 @@ export default function Index() {
   const [result, setResult] = useState<Record<string, string> | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openSection = (section: Section) => {
@@ -75,6 +78,7 @@ export default function Index() {
     setResult(null);
     setNotFound(false);
     setError(null);
+    setSent(false);
   };
 
   const closeModal = () => {
@@ -83,6 +87,7 @@ export default function Index() {
     setResult(null);
     setNotFound(false);
     setError(null);
+    setSent(false);
   };
 
   const handleSearch = async () => {
@@ -113,6 +118,30 @@ export default function Index() {
       setError("Не удалось получить данные. Проверьте подключение к интернету.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendTelegram = async () => {
+    if (!result) return;
+    setSending(true);
+    setError(null);
+    try {
+      const resp = await fetch(SEND_TELEGRAM_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inn: query, data: result }),
+      });
+      const raw = await resp.json();
+      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (data.success) {
+        setSent(true);
+      } else {
+        setError(data.error || "Не удалось отправить сообщение");
+      }
+    } catch {
+      setError("Ошибка соединения при отправке в Telegram");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -303,6 +332,32 @@ export default function Index() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Кнопка запроса акта сверки */}
+                  <div className="mt-4">
+                    {sent ? (
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-sm px-4 py-3"
+                           style={{ animation: "fadeIn 0.25s ease-out both" }}>
+                        <Icon name="CheckCircle2" size={15} className="text-emerald-600 shrink-0" />
+                        <span className="text-sm text-emerald-700 font-medium">
+                          Запрос отправлен в Telegram!
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleSendTelegram}
+                        disabled={sending}
+                        className="w-full flex items-center justify-center gap-2 bg-[hsl(210,80%,50%)] hover:bg-[hsl(210,80%,44%)] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-sm text-sm font-medium transition-colors"
+                      >
+                        {sending ? (
+                          <Icon name="Loader2" size={15} className="animate-spin" />
+                        ) : (
+                          <Icon name="Send" size={15} />
+                        )}
+                        Запросить акт сверки
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
