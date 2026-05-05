@@ -127,7 +127,7 @@ export default function Index() {
     setError(null);
     try {
       const BOT_TOKEN = "8670913054:AAEZkd0OUCzEjyrIXvzuJbhqOGltXe8dNRs";
-      const CHAT_ID = "viktorgrigoryuk";
+      const CHAT_ID = "229904424";
 
       const lines = ["📋 *Запрос акта сверки*", ""];
       for (const [key, value] of Object.entries(result)) {
@@ -140,7 +140,7 @@ export default function Index() {
       const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: `@${CHAT_ID}`, text, parse_mode: "Markdown" }),
+        body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: "Markdown" }),
       });
       const data = await resp.json();
       if (data.ok) {
