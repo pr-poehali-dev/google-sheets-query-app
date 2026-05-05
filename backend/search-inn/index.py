@@ -4,7 +4,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-SPREADSHEET_ID = "1_l5-tgk1ZSnkiAcswE-yU4iOrd2ktesT"
+SPREADSHEET_ID = "1GTsoaUlmkPOjjFRTzQpVjFLXvlGdxt93ewau0A5ns7Q"
 SHEET_GID = "791026469"
 RANGE = "A:Z"
 
