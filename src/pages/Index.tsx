@@ -11,6 +11,25 @@ interface Section {
   colorClass: string;
 }
 
+function StatusBadge({ value }: { value: string }) {
+  const v = value.toLowerCase();
+  let bg = "bg-gray-100 text-gray-700 border-gray-200";
+  if (v.includes("актив") || v.includes("готов") || v.includes("оплач") || v.includes("подписан")) {
+    bg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+  } else if (v.includes("ожид") || v.includes("провер") || v.includes("процесс") || v.includes("рассмотр")) {
+    bg = "bg-amber-50 text-amber-700 border-amber-200";
+  } else if (v.includes("отклон") || v.includes("просрочен") || v.includes("отменён") || v.includes("закрыт")) {
+    bg = "bg-red-50 text-red-700 border-red-200";
+  } else if (v.includes("новый") || v.includes("создан")) {
+    bg = "bg-blue-50 text-blue-700 border-blue-200";
+  }
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium border ${bg}`}>
+      {value}
+    </span>
+  );
+}
+
 const SECTIONS: Section[] = [
   {
     key: "contractors",
@@ -266,10 +285,19 @@ export default function Index() {
                             className={`data-row ${idx % 2 === 1 ? "bg-[hsl(216,28%,98%)]" : "bg-white"}`}
                           >
                             <td className="px-4 py-2.5 border-b border-[hsl(214,20%,86%)] text-[hsl(215,16%,48%)] font-medium text-xs">
-                              {key}
+                              {key === "Статус" ? (
+                                <span className="flex items-center gap-1">
+                                  <Icon name="Tag" size={11} className="text-[hsl(210,80%,50%)]" />
+                                  {key}
+                                </span>
+                              ) : key}
                             </td>
                             <td className="px-4 py-2.5 border-b border-[hsl(214,20%,86%)] text-[hsl(220,40%,10%)]">
-                              {value || <span className="text-[hsl(215,16%,70%)] italic">—</span>}
+                              {key === "Статус" && value ? (
+                                <StatusBadge value={value} />
+                              ) : (
+                                value || <span className="text-[hsl(215,16%,70%)] italic">—</span>
+                              )}
                             </td>
                           </tr>
                         ))}
