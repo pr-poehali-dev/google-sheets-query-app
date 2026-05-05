@@ -126,17 +126,27 @@ export default function Index() {
     setSending(true);
     setError(null);
     try {
-      const resp = await fetch(SEND_TELEGRAM_URL, {
+      const BOT_TOKEN = "8670913054:AAEZkd0OUCzEjyrIXvzuJbhqOGltXe8dNRs";
+      const CHAT_ID = "viktorgrigoryuk";
+
+      const lines = ["📋 *Запрос акта сверки*", ""];
+      for (const [key, value] of Object.entries(result)) {
+        if (value) lines.push(`*${key}:* ${value}`);
+      }
+      lines.push("");
+      lines.push("_Просьба прислать акт сверки_");
+      const text = lines.join("\n");
+
+      const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inn: query, data: result }),
+        body: JSON.stringify({ chat_id: `@${CHAT_ID}`, text, parse_mode: "Markdown" }),
       });
-      const raw = await resp.json();
-      const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (data.success) {
+      const data = await resp.json();
+      if (data.ok) {
         setSent(true);
       } else {
-        setError(data.error || "Не удалось отправить сообщение");
+        setError(data.description || "Не удалось отправить сообщение");
       }
     } catch {
       setError("Ошибка соединения при отправке в Telegram");
