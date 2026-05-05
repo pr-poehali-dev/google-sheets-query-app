@@ -2,17 +2,31 @@ import os
 import json
 import urllib.request
 import urllib.parse
+import urllib.error
 
 SPREADSHEET_ID = "1_l5-tgk1ZSnkiAcswE-yU4iOrd2ktesT"
 SHEET_GID = "791026469"
 RANGE = "A:Z"
 
 
+def google_get(url: str) -> dict:
+    """GET-запрос к Google API с читаемой ошибкой при неудаче"""
+    try:
+        with urllib.request.urlopen(url) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        try:
+            detail = json.loads(error_body).get("error", {}).get("message", error_body)
+        except Exception:
+            detail = error_body
+        raise RuntimeError(f"Google API error {e.code}: {detail}")
+
+
 def get_sheet_name(api_key: str, gid: str) -> str:
     """Получить название листа по gid"""
     url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={api_key}&fields=sheets.properties"
-    with urllib.request.urlopen(url) as resp:
-        data = json.loads(resp.read())
+    data = google_get(url)
     for sheet in data.get("sheets", []):
         props = sheet.get("properties", {})
         if str(props.get("sheetId")) == gid:
@@ -52,8 +66,7 @@ def handler(event: dict, context) -> dict:
             f"/values/{urllib.parse.quote(sheet_name)}!{RANGE}?key={api_key}"
         )
 
-        with urllib.request.urlopen(url) as resp:
-            data = json.loads(resp.read())
+        data = google_get(url)
 
         rows = data.get("values", [])
 
