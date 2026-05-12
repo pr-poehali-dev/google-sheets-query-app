@@ -1,4 +1,5 @@
 {
+  "analyze-dds": "https://functions.poehali.dev/51c54ea1-5449-4228-873f-56122b967c6b",
   "send-telegram": "https://functions.poehali.dev/9346d690-afa8-42ae-8ea4-cd831e1b62d7",
   "search-inn": "https://functions.poehali.dev/53084ea8-1999-43e8-bb8e-c710a430c4d9"
 }

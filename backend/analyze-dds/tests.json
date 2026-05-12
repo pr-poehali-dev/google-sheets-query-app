@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "Анализ ДДС за 1 квартал 2026",
+      "method": "POST",
+      "path": "/",
+      "body": {"quarter": 1, "year": 2026},
+      "expectedStatus": 200,
+      "expectedBody": {"quarter": 1},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
